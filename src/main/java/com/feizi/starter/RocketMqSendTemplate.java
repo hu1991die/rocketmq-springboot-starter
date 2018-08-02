@@ -47,8 +47,10 @@ public class RocketMqSendTemplate implements InitializingBean, DisposableBean {
             //发送结束时间
             long end = System.currentTimeMillis();
 
-            LOGGER.info("rocketMq syncSend message: {}, topic: {}, msgId: {}, cost: {}ms, sendResult: {}",
-                    message, message.getTopic(), sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+            LOGGER.info("rocketMq syncSend message: {}, topic: {}, tags:{}, keys:{}, msgId: {}, cost: {}ms, sendResult: {}",
+                    message, message.getTopic(), message.getTags(), message.getKeys(),
+                    sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+
             return sendResult;
         } catch (Exception e) {
             LOGGER.error("rocketMq syncSend message error...{}", e);
@@ -75,8 +77,10 @@ public class RocketMqSendTemplate implements InitializingBean, DisposableBean {
             //发送结束时间
             long end = System.currentTimeMillis();
 
-            LOGGER.info("rocketMq syncSend message: {}, topic: {}, msgId: {}, cost: {}ms, sendResult: {}",
-                    message, message.getTopic(), sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+            LOGGER.info("rocketMq syncSend message: {}, topic: {}, tags:{}, keys:{}, msgId: {}, cost: {}ms, sendResult: {}",
+                    message, message.getTopic(), message.getTags(), message.getKeys(),
+                    sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+
             return sendResult;
         } catch (Exception e) {
             LOGGER.info("rocketMq syncSend message failed...{}", message);
@@ -127,8 +131,9 @@ public class RocketMqSendTemplate implements InitializingBean, DisposableBean {
             //发送结束时间
             long end = System.currentTimeMillis();
 
-            LOGGER.info("rocketMq sendOneWay message: {}, topic: {}, cost: {} ms",
-                    message, message.getTopic(), (end - begin));
+            LOGGER.info("rocketMq sendOneWay message: {}, topic: {}, tags:{}, keys:{}, cost: {} ms",
+                    message, message.getTopic(), message.getTags(), message.getKeys(), (end - begin));
+
         } catch (Exception e) {
             LOGGER.error("rocketMq sendOneWay message error...{}", e);
             throw new RuntimeException(e.getMessage(), e);
@@ -157,8 +162,10 @@ public class RocketMqSendTemplate implements InitializingBean, DisposableBean {
             //发送结束时间
             long end = System.currentTimeMillis();
 
-            LOGGER.info("rocketMq send delay message: {}, topic: {}, msgId: {}, cost: {}ms, sendResult: {}",
-                    message, message.getTopic(), sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+            LOGGER.info("rocketMq sendDelay message: {}, topic: {}, tags:{}, keys:{}, msgId: {}, cost: {}ms, sendResult: {}",
+                    message, message.getTopic(), message.getTags(), message.getKeys(),
+                    sendResult != null ? sendResult.getMsgId() : "", (end - begin), sendResult);
+
         } catch (Exception e) {
             LOGGER.error("rocketMq send delay message error...{}", e);
         }
@@ -197,8 +204,9 @@ public class RocketMqSendTemplate implements InitializingBean, DisposableBean {
             //发送结束时间
             long end = System.currentTimeMillis();
 
-            LOGGER.info("rocketMq sendAsync  message: {}, topic: {}, cost: {} ms",
-                    message, message.getTopic(), (end - begin));
+            LOGGER.info("rocketMq sendAsync message: {}, topic: {}, tags:{}, keys:{}, cost: {} ms",
+                    message, message.getTopic(), message.getTags(), message.getKeys(), (end - begin));
+
         } catch (Exception e) {
             LOGGER.error("rocketMq sendAsync message error...{}", e);
         }

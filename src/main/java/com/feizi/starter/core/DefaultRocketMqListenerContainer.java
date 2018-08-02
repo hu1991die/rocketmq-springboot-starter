@@ -12,6 +12,7 @@ import org.apache.rocketmq.client.consumer.listener.ConsumeOrderlyStatus;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
 import org.apache.rocketmq.client.consumer.listener.MessageListenerOrderly;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.slf4j.Logger;
@@ -288,20 +289,6 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
         }
     }
 
-    @Override
-    public String toString() {
-        return "DefaultRocketMQListenerContainer{" +
-                "consumerGroup='" + consumerGroup + '\'' +
-                ", nameServer='" + nameServer + '\'' +
-                ", topic='" + topic + '\'' +
-                ", consumeMode=" + consumeMode +
-                ", selectorType=" + selectorType +
-                ", selectorExpress='" + selectorExpress + '\'' +
-                ", messageModel=" + messageModel +
-                ", consumeThreadMax=" + consumeThreadMax +
-                '}';
-    }
-
     /**
      * 消息转换
      * @param messageExt 扩展类消息
@@ -309,7 +296,8 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
      */
     private Object doConvertMessage(MessageExt messageExt){
         //判断接收到的MQ消费类型
-        if(Objects.equals(messageType, MessageExt.class)){
+        if(Objects.equals(messageType, MessageExt.class)
+                || Objects.equals(messageType, Message.class)){
            return messageExt;
         }else {
             //将接收到的MQ消息转成字符串（UTF-8）
@@ -349,6 +337,20 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
         }else {
             return Object.class;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "DefaultRocketMQListenerContainer{" +
+                "consumerGroup='" + consumerGroup + '\'' +
+                ", nameServer='" + nameServer + '\'' +
+                ", topic='" + topic + '\'' +
+                ", consumeMode=" + consumeMode +
+                ", selectorType=" + selectorType +
+                ", selectorExpress='" + selectorExpress + '\'' +
+                ", messageModel=" + messageModel +
+                ", consumeThreadMax=" + consumeThreadMax +
+                '}';
     }
 
     public long getSuspendCurrentQueueTimeMillis() {

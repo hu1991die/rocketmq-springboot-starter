@@ -34,13 +34,8 @@ private RocketMqSendTemplate rocketMqSendTemplate;
 ##### 4.包装MQ消息
 
 ```
-MessageData<User> messageData2 = new MessageData<>();
-messageData2.setUuid(UUID.randomUUID().toString());
-messageData2.setTimestamp(System.currentTimeMillis());
-User user2 = new User(2, "hello", 26);
-messageData2.setData(user2);
-
-Message message1 = MessageUtils.wrapMessage(MQ_TOPIC1, messageData1);
+//封装MQ消息，可以指定topic主题，tag子主题，和key唯一识别码
+Message message = MessageUtils.buildMessage("feizi_topic", "tagA", "key001", new User(1, "feizi", 25));
 ```
 
 **注意**：上面的`User`类定义在starter里面是为了方便测试，实际应用的时候直接定义在业务模块里面就可以了
@@ -49,7 +44,7 @@ Message message1 = MessageUtils.wrapMessage(MQ_TOPIC1, messageData1);
 ##### 5.发送MQ消息
 ```
 //发送MQ消息
-SendResult sendResult1 = rocketMqSendTemplate.syncSend(message1);
+SendResult sendResult = rocketMqSendTemplate.syncSend(message, 3);
 ```
 
 ##### 生产端完整代码（`MqProducerApplication.java`）：
@@ -61,8 +56,7 @@ public class MqProducerApplication implements CommandLineRunner {
 	/**
 	 * MQ消息消费者topic定义
 	 */
-	private static final String MQ_TOPIC1 = "feizi_topic1";
-	private static final String MQ_TOPIC2 = "feizi_topic2";
+	private static final String MQ_TOPIC = "feizi_topic";
 
 	@Resource
 	private RocketMqSendTemplate rocketMqSendTemplate;
@@ -75,46 +69,29 @@ public class MqProducerApplication implements CommandLineRunner {
 	public void run(String... strings) throws Exception {
 		LOGGER.info("================start生产者发送MQ消息");
 
-		//first
-		MessageData<User> messageData1 = new MessageData<>();
-		messageData1.setUuid(UUID.randomUUID().toString());
-		messageData1.setTimestamp(System.currentTimeMillis());
-		User user1 = new User(1, "feizi", 25);
-		messageData1.setData(user1);
-
-		//second
-		MessageData<User> messageData2 = new MessageData<>();
-		messageData2.setUuid(UUID.randomUUID().toString());
-		messageData2.setTimestamp(System.currentTimeMillis());
-		User user2 = new User(2, "hello", 26);
-		messageData2.setData(user2);
-
+		/*############################first###############################*/
 		//封装MQ消息（first）
-		Message message1 = MessageUtils.wrapMessage(MQ_TOPIC1, messageData1);
+		Message message1 = MessageUtils.buildMessage(MQ_TOPIC, "tagA", "key001", new User(1, "feizi", 25));
+		sendMessage(message1);
 
-		//发送MQ消息
-		SendResult sendResult1 = rocketMqSendTemplate.syncSend(message1);
-		if(null != sendResult1){
-			/**
-			 * TODO 发送结果，发送完毕执行业务操作
-			 */
-			LOGGER.info("================sendResult1: " + sendResult1);
-		}
-
-		/*##################################################################*/
-
+		/*############################second###############################*/
 		//封装MQ消息（second）
-		Message message2 = MessageUtils.wrapMessage(MQ_TOPIC2, messageData2);
+		Message message2 = MessageUtils.buildMessage(MQ_TOPIC, "tagB", "key002", new User(2, "hello", 26));
+		sendMessage(message2);
 
-		//发送MQ消息, 如果失败，则尝试发送3次
-		SendResult sendResult2 = rocketMqSendTemplate.syncSend(message2, 3);
-		if(null != sendResult2){
+		LOGGER.info("================end生产者发送MQ消息");
+	}
+
+	/*发送MQ消息*/
+	private void sendMessage(Message message){
+		/* 发送MQ消息, 如果失败，则尝试发送3次 */
+		SendResult sendResult = rocketMqSendTemplate.syncSend(message, 3);
+		if(null != sendResult){
 			/**
 			 * TODO 发送结果，发送完毕执行业务操作
 			 */
-			LOGGER.info("================sendResult2: " + sendResult2);
+			LOGGER.info("================sendResult: " + sendResult);
 		}
-		LOGGER.info("================end生产者发送MQ消息");
 	}
 }
 ```
@@ -151,7 +128,7 @@ spring.rocketmq.name-server=127.0.0.1:9876
 
 ```
 @Component
-public class MyConsumer1 implements RocketMqConsumerListener<MessageData>{
+public class MyConsumer1 implements RocketMqConsumerListener<Message>{
 
 }
 ```
@@ -162,8 +139,8 @@ public class MyConsumer1 implements RocketMqConsumerListener<MessageData>{
 
 ```
 @Component
-@RocketMqConsumer(topic = "feizi_topic1", consumerGroup = "my_consumer_group1")
-public class MyConsumer1 implements RocketMqConsumerListener<MessageData> {
+@RocketMqConsumer(topic = "feizi_topic", selectorExpress = "tagA", consumerGroup = "my_consumer_group1")
+public class MyConsumer1 implements RocketMqConsumerListener<Message> {
 
 }
 ```
@@ -172,85 +149,53 @@ public class MyConsumer1 implements RocketMqConsumerListener<MessageData> {
 
 ```
 @Component
-@RocketMqConsumer(topic = "feizi_topic1", consumerGroup = "my_consumer_group1")
-public class MyConsumer1 implements RocketMqConsumerListener<MessageData> {
+@RocketMqConsumer(topic = "feizi_topic", selectorExpress = "tagA", consumerGroup = "my_consumer_group1")
+public class MyConsumer1 implements RocketMqConsumerListener<Message> {
     private static final Logger LOGGER = LoggerFactory.getLogger(MyConsumer1.class);
 
     @Override
-    public void consume(MessageData message) {
+    public boolean consume(Message message) {
         LOGGER.info("==========================consumer start=====================");
 
         if(Objects.isNull(message)){
             //接收到空消息，也表明此次消费成功
-            return;
+            return true;
+        }
+        LOGGER.info("MyConsumer received message: {}", message);
+        LOGGER.info("消息主题topic: {}", message.getTopic());
+        LOGGER.info("消息子主题tags: {}", message.getTags());
+        LOGGER.info("消息keys: {}", message.getKeys());
+
+        //取出消息体
+        byte[] messageBody = message.getBody();
+        if(Objects.isNull(messageBody)){
+            //接收到空消息，也表明此次消费成功
+            return true;
         }
 
         /**
          * TODO 具体的业务逻辑
          */
-        LOGGER.info("MyConsumer1 received message: {}", message);
-        LOGGER.info("UUID唯一值，用于消费幂等控制：: {}", message.getUuid());
-        LOGGER.info("消息产生时间戳: {}", message.getTimestamp());
-        LOGGER.info("消息内容: {}", message.getData());
 
-        //json字符串转Obj
-        User user = JsonUtils.jsonStr2Obj(message.getData(), new TypeReference<User>(){});
-        LOGGER.info("具体内容: {}", user);
-        LOGGER.info("id: {}", user.getId());
-        LOGGER.info("name: {}", user.getName());
-        LOGGER.info("age: {}", user.getAge());
-
-        LOGGER.info("==========================consumer end=====================");
-    }
-}
-```
-
-**注意**：对于注解RocketMqConsumerListener<T>的泛型参数T，可以指定MessageData消息封装类类型也可以直接指定String类型，建议指定为统一的封装类MessageData类型。
-
-##### 如果将泛型参数T指定为String类型，则代码如下：
-
-```
-@Component
-@RocketMqConsumer(topic = "feizi_topic2", consumerGroup = "my_consumer_group2")
-public class MyConsumer2 implements RocketMqConsumerListener<String> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyConsumer2.class);
-
-    @Override
-    public void consume(String message) {
-        LOGGER.info("==========================consumer start=====================");
-
-        if(Objects.isNull(message)){
-            //接收到空消息，也表明此次消费成功
-            return;
-        }
-
-        /**
-         * TODO 具体的业务逻辑
-         */
-        MessageData<User> messageData = JsonUtils.jsonStr2Obj(message, new TypeReference<MessageData<User>>(){});
-        LOGGER.info("MyConsumer1 received message: {}", messageData);
+        String messageStr = StringUtils.byteArr2Str(messageBody);
+        MessageData<User> messageData = JsonUtils.jsonStr2Obj(messageStr, new TypeReference<MessageData<User>>(){});
         LOGGER.info("UUID唯一值，用于消费幂等控制：: {}", messageData.getUuid());
         LOGGER.info("消息产生时间戳: {}", messageData.getTimestamp());
-        LOGGER.info("消息内容: {}", messageData.getData());
 
         //json字符串转Obj
-        User user = JsonUtils.jsonStr2Obj(messageData.getData(), new TypeReference<User>(){});
-        LOGGER.info("具体内容: {}", user);
+        User user = JsonUtils.jsonObj2Obj(messageData.getData(), new TypeReference<User>(){});
+        LOGGER.info("消息内容: {}", user);
         LOGGER.info("id: {}", user.getId());
         LOGGER.info("name: {}", user.getName());
         LOGGER.info("age: {}", user.getAge());
 
         LOGGER.info("==========================consumer end=====================");
+        return true;
     }
 }
 ```
 
-我们可以对比下上面将泛型参数T分别指定为MessageData类型和String类型这两种类型的区别。
-如果指定为String类型，则接收到的是json字符串，如果需要拿到里面具体的参数就需要额外转换一次。
-
-```
-MessageData<User> messageData = JsonUtils.jsonStr2Obj(message, new TypeReference<MessageData<User>>(){});
-```
+**注意**：对于注解RocketMqConsumerListener的泛型参数T，可以指定为Message类型，也可以指定MessageData消息封装类类型，同时还可以直接指定String类型，建议统一指定为`Message`类型，因为这样我们可以直接拿到`topic`主题，`tag`子主题和`key`唯一识别码。
 
 ### 三、demo运行效果
 
