@@ -82,6 +82,11 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
     private int consumeThreadMax = 64;
 
     /**
+     * 消费端消费失败最大重试次数，默认为3次
+     */
+    private int maxReconsumeTimes = 3;
+
+    /**
      * 字符集编码格式：UTF-8
      */
     private String charsetUtf8 = "UTF-8";
@@ -170,10 +175,16 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
                     long end = System.currentTimeMillis();
                     LOGGER.info("rocketMq consume msgId: {}, cost: {} ms", messageExt.getMsgId(), (end - begin));
                 } catch (Exception e) {
-                    LOGGER.warn("rocketMq consume message failed. msg: {}", messageExt, e);
+                    LOGGER.error("rocketMq consume message failed. msg: {}", messageExt, e);
 
                     //设置下次消费的延时级别
                     context.setDelayLevelWhenNextConsume(delayLevelWhenNextConsume);
+
+                    /* 如果重试了三次仍旧失败则直接返回消费成功 */
+                    if(messageExt.getReconsumeTimes() == maxReconsumeTimes){
+                        return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+                    }
+
                     //稍后重试
                     return ConsumeConcurrentlyStatus.RECONSUME_LATER;
                 }
@@ -201,9 +212,15 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
                     long end = System.currentTimeMillis();
                     LOGGER.info("rocketMq consume msgId: {}, cost: {} ms", messageExt.getMsgId(), (end - begin));
                 } catch (Exception e) {
-                    LOGGER.warn("rocketMq consume message failed. msg:{}", messageExt, e);
+                    LOGGER.error("rocketMq consume message failed. msg:{}", messageExt, e);
+
                     //如果消费失败，则让当前队列暂停一会再消费
                     context.setSuspendCurrentQueueTimeMillis(suspendCurrentQueueTimeMillis);
+
+                    /*如果重试了三次仍旧失败则直接返回消费成功*/
+                    if(messageExt.getReconsumeTimes() == maxReconsumeTimes){
+                        return ConsumeOrderlyStatus.SUCCESS;
+                    }
 
                     //当前队列暂停消费一会儿
                     return ConsumeOrderlyStatus.SUSPEND_CURRENT_QUEUE_A_MOMENT;
@@ -232,6 +249,8 @@ public class DefaultRocketMqListenerContainer implements InitializingBean, Rocke
         consumer.setNamesrvAddr(nameServer);
         /* 设置最大消费者线程数 */
         consumer.setConsumeThreadMax(consumeThreadMax);
+        /* 设置消费失败最大重试次数， 默认为3次 */
+        consumer.setMaxReconsumeTimes(maxReconsumeTimes);
 
         if(consumeThreadMax < consumer.getConsumeThreadMin()){
             //以设置的最大消费者线程数为准

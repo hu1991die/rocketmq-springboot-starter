@@ -10,5 +10,5 @@ public interface RocketMqConsumerListener<T> {
      * 监听到消息进行消费
      * @param message MQ消息
      */
-    void consume(T message);
+    boolean consume(T message);
 }
