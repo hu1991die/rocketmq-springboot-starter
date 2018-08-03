@@ -200,7 +200,7 @@ public class MyConsumer1 implements RocketMqConsumerListener<Message> {
 ### 三、demo运行效果
 
 1. 生产者端（发送消息端）：
-![https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/producer%20.png](https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/producer%20.png)
+![https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/producer.png](https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/producer.png)
 
 2. 消费者端（接收消息端）：
 ![https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/consumer.png](https://github.com/hu1991die/rocketmq-springboot-starter/blob/master/img/consumer.png)
