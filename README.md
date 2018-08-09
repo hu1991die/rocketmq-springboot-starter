@@ -155,16 +155,14 @@ public class MyConsumer1 implements RocketMqConsumerListener<Message> {
 
     @Override
     public boolean consume(Message message) {
-        LOGGER.info("==========================consumer start=====================");
+        LOGGER.info("==========================MyConsumer1 start=====================");
 
         if(Objects.isNull(message)){
             //接收到空消息，也表明此次消费成功
             return true;
         }
-        LOGGER.info("MyConsumer received message: {}", message);
-        LOGGER.info("消息主题topic: {}", message.getTopic());
-        LOGGER.info("消息子主题tags: {}", message.getTags());
-        LOGGER.info("消息keys: {}", message.getKeys());
+        LOGGER.info("MyConsumer1 received message: {}, topic: {}, tags: {}, keys: {}",
+                message, message.getTopic(), message.getTags(), message.getKeys());
 
         //取出消息体
         byte[] messageBody = message.getBody();
@@ -173,23 +171,25 @@ public class MyConsumer1 implements RocketMqConsumerListener<Message> {
             return true;
         }
 
+        /* 将byte数组类型转字符串 */
+        String messageStr = StringUtils.byteArr2Str(messageBody);
+        MessageData<User> messageData = JsonUtils.jsonStr2Obj(messageStr, new TypeReference<MessageData<User>>(){});
+        LOGGER.info("幂等控制UUID: {}, 消息产生时间戳: {}",
+                messageData.getUuid(), messageData.getTimestamp());
+
+        //json字符串转Obj
+        User user = JsonUtils.jsonObj2Obj(messageData.getData(), new TypeReference<User>(){});
+        if(Objects.isNull(user)){
+            //接收到空消息，也表明此次消费成功
+            return true;
+        }
+        LOGGER.info("消息内容: {}", user);
+
         /**
          * TODO 具体的业务逻辑
          */
 
-        String messageStr = StringUtils.byteArr2Str(messageBody);
-        MessageData<User> messageData = JsonUtils.jsonStr2Obj(messageStr, new TypeReference<MessageData<User>>(){});
-        LOGGER.info("UUID唯一值，用于消费幂等控制：: {}", messageData.getUuid());
-        LOGGER.info("消息产生时间戳: {}", messageData.getTimestamp());
-
-        //json字符串转Obj
-        User user = JsonUtils.jsonObj2Obj(messageData.getData(), new TypeReference<User>(){});
-        LOGGER.info("消息内容: {}", user);
-        LOGGER.info("id: {}", user.getId());
-        LOGGER.info("name: {}", user.getName());
-        LOGGER.info("age: {}", user.getAge());
-
-        LOGGER.info("==========================consumer end=====================");
+        LOGGER.info("==========================MyConsumer1 end=====================");
         return true;
     }
 }
