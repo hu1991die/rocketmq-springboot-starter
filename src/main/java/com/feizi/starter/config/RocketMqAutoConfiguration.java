@@ -58,23 +58,26 @@ public class RocketMqAutoConfiguration {
     @ConditionalOnMissingBean(DefaultMQProducer.class)
     @ConditionalOnProperty(prefix = "spring.rocketmq", value = {"name-server", "producer-config.group"})
     public DefaultMQProducer mqProducer(){
+        /**
+         * 设置生产者参数
+         */
         //获取MQ生产者配置
         RocketMqProperties.RocketMqProducerConfig producerConfig = rocketMqProperties.getProducerConfig();
+
+        //获取nameServer地址
+        String nameServer = rocketMqProperties.getNameServer();
+        Assert.hasText(nameServer, "[spring.rocketmq.name-server] must not be null");
 
         //获取生产者组
         String producerGroup = producerConfig.getGroup();
         Assert.hasText(producerGroup, "[spring.rocketmq.producer-config.group] must not be null");
 
+        LOGGER.info("rocketMq name-server: {}, producer-config.group: {}", nameServer, producerGroup);
+
         //实例化一个生产者
-        DefaultMQProducer producer = new DefaultMQProducer(producerConfig.getGroup());
-
-        /**
-         * 设置生产者参数
-         */
-        //nameServer寻址地址
-        producer.setNamesrvAddr(rocketMqProperties.getNameServer());
-
-        LOGGER.info("rocketMq name-server: {}, producer-config.group: {}", rocketMqProperties.getNameServer(), producerConfig.getGroup());
+        DefaultMQProducer producer = new DefaultMQProducer(producerGroup);
+        //设置nameServer寻址地址
+        producer.setNamesrvAddr(nameServer);
 
         //发送消息超时时间
         producer.setSendMsgTimeout(producerConfig.getSendMsgTimeout());
@@ -100,7 +103,7 @@ public class RocketMqAutoConfiguration {
      * @return
      */
     @Bean(destroyMethod = "destroy")
-    @ConditionalOnBean(DefaultMQProducer.class)
+    @ConditionalOnClass(DefaultMQProducer.class)
     @ConditionalOnMissingBean(name = "rocketMQSendTemplate")
     public RocketMqSendTemplate rocketMQSendTemplate(DefaultMQProducer producer){
         RocketMqSendTemplate rocketMqSendTemplate = new RocketMqSendTemplate();
